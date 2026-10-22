@@ -68,16 +68,86 @@ export class GrapeScene3D {
     setRealismLevel(level) { this.realismLevel = level; this.initWebGLPipeline(); }
     initWebGLPipeline() {
         const gl = this.gl;
-        const vsSource = `attribute vec4 aVertexPosition;uniform mat4 uModelViewMatrix;uniform mat4 uProjectionMatrix;void main(){gl_Position=uProjectionMatrix*uModelViewMatrix*aVertexPosition;}`;
-        const fsSource = `precision mediump float;uniform vec4 uMaterialColor;uniform float uMaterialType;uniform float uRealismLevel;uniform float uInShadow;void main(){vec4 c=uMaterialColor;if(uRealismLevel==0.0){gl_FragColor=c;return;}float shadowMult=1.0;if(uInShadow==1.0&&uRealismLevel>0.0){shadowMult=0.4;}if(uMaterialType==1.0){c.b+=0.3;c.a=0.7;}else if(uMaterialType==2.0){c*=1.4;}c.rgb*=shadowMult;gl_FragColor=c;}`;
-        const vertexShader = this.compileShader(gl.VERTEX_SHADER, vsSource), fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
-        this.shaderProgram = gl.createProgram(); gl.attachShader(this.shaderProgram, vertexShader); gl.attachShader(this.shaderProgram, fragmentShader); gl.linkProgram(this.shaderProgram);
-        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) { console.error("Shader linking failed"); return; }
-        gl.useProgram(this.shaderProgram); this.vertexPositionLoc = gl.getAttribLocation(this.shaderProgram, 'aVertexPosition');
-        this.uModelViewMatrixLoc = gl.getUniformLocation(this.shaderProgram, 'uModelViewMatrix'); this.uProjectionMatrixLoc = gl.getUniformLocation(this.shaderProgram, 'uProjectionMatrix');
-        this.uMaterialColorLoc = gl.getUniformLocation(this.shaderProgram, 'uMaterialColor'); this.uMaterialTypeLoc = gl.getUniformLocation(this.shaderProgram, 'uMaterialType');
-        this.uRealismLevelLoc = gl.getUniformLocation(this.shaderProgram, 'uRealismLevel'); this.uInShadowLoc = gl.getUniformLocation(this.shaderProgram, 'uInShadow');
-        gl.clearColor(0.17, 0.10, 0.30, 1.0); gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+// Upgraded Vertex Shader: Passes normals down to calculate shading
+const vsSource = `
+    attribute vec4 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+    varying vec3 vNormal;
+    void main() {
+        gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+        vNormal = aVertexNormal;
+    }
+`;
+
+// Upgraded Fragment Shader: Simulates realistic 3D lighting depths
+const fsSource = `
+    precision mediump float;
+    varying vec3 vNormal;
+    uniform vec4 uMaterialColor;
+    uniform float uMaterialType;
+    uniform float uRealismLevel;
+    uniform float uInShadow;
+    void main() {
+        vec4 c = uMaterialColor;
+        if(uRealismLevel == 0.0) {
+            gl_FragColor = c;
+            return;
+        }
+        
+        // Simple directional lighting simulation based on surface angle
+        vec3 normal = normalize(vNormal);
+        vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+        float lightIntensity = max(dot(normal, lightDir), 0.2); // 0.2 baseline ambient light
+        
+        float shadowMult = 1.0;
+        if(uInShadow == 1.0 && uRealismLevel > 0.0) {
+            shadowMult = 0.4;
+        }
+        
+        if(uMaterialType == 1.0) { // Refractive glass-like mode
+            c.b += 0.3;
+            c.a = 0.7;
+        } else if(uMaterialType == 2.0) { // Shiny mode
+            c *= 1.4;
+        }
+        
+        c.rgb *= (lightIntensity * shadowMult);
+        gl_FragColor = c;
+    }
+`;
+
+const vertexShader = this.compileShader(gl.VERTEX_SHADER, vsSource);
+const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
+
+this.shaderProgram = gl.createProgram();
+gl.attachShader(this.shaderProgram, vertexShader);
+gl.attachShader(this.shaderProgram, fragmentShader);
+gl.linkProgram(this.shaderProgram);
+
+if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+    console.error("Shader linking failed:", gl.getProgramInfoLog(this.shaderProgram));
+    return;
+}
+
+gl.useProgram(this.shaderProgram);
+
+// Hook up variables between JavaScript and WebGL
+this.vertexPositionLoc = gl.getAttribLocation(this.shaderProgram, 'aVertexPosition');
+this.vertexNormalLoc = gl.getAttribLocation(this.shaderProgram, 'aVertexNormal'); // New location hook
+
+this.uModelViewMatrixLoc = gl.getUniformLocation(this.shaderProgram, 'uModelViewMatrix');
+this.uProjectionMatrixLoc = gl.getUniformLocation(this.shaderProgram, 'uProjectionMatrix');
+this.uMaterialColorLoc = gl.getUniformLocation(this.shaderProgram, 'uMaterialColor');
+this.uMaterialTypeLoc = gl.getUniformLocation(this.shaderProgram, 'uMaterialType');
+this.uRealismLevelLoc = gl.getUniformLocation(this.shaderProgram, 'uRealismLevel');
+this.uInShadowLoc = gl.getUniformLocation(this.shaderProgram, 'uInShadow');
+
+gl.clearColor(0.17, 0.10, 0.30, 1.0);
+gl.enable(gl.DEPTH_TEST);
+gl.enable(gl.CULL_FACE);
+gl.cullFace(gl.BACK);
     }
     compileShader(type, source) {
         const gl = this.gl, shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);
