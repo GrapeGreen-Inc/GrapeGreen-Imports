@@ -180,7 +180,7 @@ gl.cullFace(gl.BACK);
             let typeId = obj.material.type === "Glass" ? 1.0 : (obj.material.type === "Metallic" ? 2.0 : 0.0);
             gl.uniform4f(this.uMaterialColorLoc, obj.material.color.r / 255, obj.material.color.g / 255, obj.material.color.b / 255, 1.0); gl.uniform1f(this.uMaterialTypeLoc, typeId); gl.uniform1f(this.uInShadowLoc, inShadow);
             const mvMatrix = new Float32Array([obj.scale.x,0,0,0,0,obj.scale.y,0,0,0,0,obj.scale.z,0,obj.position.x,obj.position.y,obj.position.z,1]); gl.uniformMatrix4fv(this.uModelViewMatrixLoc, false, mvMatrix);
-            const pts = obj.customPoints.length ? obj.customPoints :, buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
+            const pts = obj.customPoints.length ? obj.customPoints : [], buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
             gl.vertexAttribPointer(this.vertexPositionLoc, 3, gl.FLOAT, false, 0, 0); gl.enableVertexAttribArray(this.vertexPositionLoc); gl.drawArrays(gl.TRIANGLE_STRIP, 0, pts.length / 3);
         });
     }
