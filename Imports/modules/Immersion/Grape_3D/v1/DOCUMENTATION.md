@@ -7,7 +7,7 @@ Modular WebGL GPU-accelerated graphics engine running completely on client-side 
 
 ## 🌐 1. Vector Math Core (`Vector3`)
 ```javascript
-import { Vector3 } from "https://github.io";
+import { Vector3 } from "https://grapegreen-inc.github.io/GrapeGreen-Imports/Imports/modules/Immersion/Grape_3D/v1/Three-dim.js";
 ```
 * **`add(v)`**: Vector addition.
 * **`sub(v)`**: Vector subtraction.
